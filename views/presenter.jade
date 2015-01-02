@@ -1,0 +1,269 @@
+ad
+title Beebotte
+meta(http-equiv="Content-Type", content="text/html; charset=utf-8")
+meta(name="viewport", content="width=device-width, initial-scale=1.0")
+link(rel="stylesheet", type="text/css", href="//beebotte.com/bootstrap.css")
+// HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries
+//if lt IE 9
+  script(src="/html5shiv.js")
+  script(src="/respond.js")
+link(href="//fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,700italic,800italic,400,300,600,700,800", rel="stylesheet", type="text/css")
+style.
+  @media (min-width: 991px) {
+    #nav-top ul {
+      float: right;
+    }
+  }
+  .navigation {
+    position: fixed;
+    bottom: 15px;
+    right: 10%;
+    z-index: 999;
+    margin:0px;
+  }
+  .navigation_left {
+    position: fixed;
+    bottom: 15px;
+    left: 10%;
+    z-index: 999;
+    margin:0px;
+  }
+  body {
+    background-color: #444444;
+  }
+dy
+div
+  canvas#the-canvas(style="display: block; margin:5px auto 0 auto; border:1px solid black")
+nav
+  ul.pager.navigation_left
+    li  
+      button.btn.btn-success(onclick="toggleFullScreen(document.body)") Fullscreen
+    li  
+      span Link: http://bbt-sandbox1.cloudapp.net/v/#{fileid}
+nav
+  ul.pager.navigation
+    li
+      span
+        | Pointer:  
+        input#pointer(type="checkbox", name="pointer", onclick="toggleSharePointer(true);")    
+    li  
+      button#prev.btn.btn-success Previous  
+    li  
+      button#next.btn.btn-success Next  
+    li  
+      span  
+        | Page:  
+        span#page_num  
+        | /  
+        span#page_count  
+script(src="//d2imkaiqu95sh.cloudfront.net/assets/js/jquery.min.js")
+script(src="//d2imkaiqu95sh.cloudfront.net/assets/js/bootstrap.min.js")
+script(src="//cdn.socket.io/socket.io-1.1.0.js")
+script(src="//beebotte.com/bbt.js")
+script(src="/js/pdf.js")
+script(src="/js/moustrap.min.js")
+script#script.
+      var url = '/f/!{fileid}.pdf';
+      var pdfDoc = null,
+          pageNum = 1,
+          pageRendering = false,
+          pageNumPending = null,
+          //scale = 1,
+          canvas = document.getElementById('the-canvas'),
+          ctx = canvas.getContext('2d'),
+          bbt = null,
+          sharePointer = false;
+
+      function handleSharePointer(cb) {
+        sharePointer = cb.checked;
+      }
+      /**
+       * Get page info from document, resize canvas accordingly, and render page.
+       * @param num Page number.
+       */
+      function renderPage(num) {
+        pageRendering = true;
+        // Using promise to fetch the page
+        pdfDoc.getPage(num).then(function(page) {
+          //var viewport = page.getViewport(scale);
+          canvas.height = window.innerHeight - 10  ;
+          var viewport = page.getViewport(canvas.height / page.getViewport(1.0).height);
+          if( viewport.width > window.innerWidth ) {
+            canvas.width = window.innerWidth - 10;
+            var viewport = page.getViewport(canvas.width / page.getViewport(1.0).width);
+            canvas.height = viewport.height;
+          }else {
+            canvas.width = viewport.width;
+          }
+
+          // Render PDF page into canvas context
+          var renderContext = {
+            canvasContext: ctx,
+            viewport: viewport
+          };
+          var renderTask = page.render(renderContext);
+
+          // Wait for rendering to finish
+          renderTask.promise.then(function () {
+            pageRendering = false;
+            if (pageNumPending !== null) {
+              // New page rendering is pending
+              renderPage(pageNumPending);
+              pageNumPending = null;
+            }
+          });
+        });
+
+        // Update page counters
+        document.getElementById('page_num').textContent = pageNum;
+      }
+
+      /**
+       * If another page rendering in progress, waits until the rendering is
+       * finised. Otherwise, executes rendering immediately.
+       */
+      function queueRenderPage(num) {
+        if (pageRendering) {
+          pageNumPending = num;
+        } else {
+          renderPage(num);
+        }
+      }
+
+      /**
+       * Displays previous page.
+       */
+      function onPrevPage() {
+        if (pageNum <= 1) {
+          return;
+        }
+        pageNum--;
+        queueRenderPage(pageNum);
+        if(bbt) {
+          bbt.publish({channel: 'pres!{fileid}', resource: 'synch'}, {page: pageNum, time: Date.now()});
+        }
+      }
+      document.getElementById('prev').addEventListener('click', onPrevPage);
+
+      /**
+       * Displays next page.
+       */
+      function onNextPage() {
+        if (pageNum >= pdfDoc.numPages) {
+          return;
+        }
+        pageNum++;
+        queueRenderPage(pageNum);
+        if(bbt) {
+          bbt.publish({channel: 'pres!{fileid}', resource: 'synch'}, {page: pageNum, time: Date.now()});
+        }
+      }
+      document.getElementById('next').addEventListener('click', onNextPage);
+
+      /**
+       * Asynchronously downloads PDF.
+       */
+      PDFJS.getDocument(url).then(function (pdfDoc_) {
+        pdfDoc = pdfDoc_;
+        document.getElementById('page_count').textContent = pdfDoc.numPages;
+        bbt = new BBT('502b09f9113252ba91d0fa24b2e69c1e', {ws_host: 'beebotte.com', auth_endpoint: '/auth'});
+
+        bbt.subscribe( {channel: 'pres!{fileid}', resource: 'join', read: true, write: false}, function(message){
+          console.log(message);
+          bbt.publish({channel: 'pres!{fileid}', resource: 'synch'}, {page: pageNum, time: Date.now()});
+        });
+
+        bbt.subscribe( {channel: 'pres!{fileid}', resource: 'synch', read: true, write: true}, function(message){
+        });
+
+        bbt.subscribe( {channel: 'pres!{fileid}', resource: 'XY', read: true, write: true}, function(message){
+        });
+
+        var mie = (navigator.appName == "Microsoft Internet Explorer") ? true : false;
+        if (!mie) {
+             document.captureEvents(Event.MOUSEMOVE);
+             document.captureEvents(Event.MOUSEDOWN);
+        }
+
+        canvas.onmousemove = function (e) {mousePos(e);};
+
+        var moved = false;
+        var mouseX = 0;
+        var mouseY = 0;
+
+        function mousePos (e) {
+            if (!mie) {
+                mouseX = e.pageX; 
+                mouseY = e.pageY;
+            }
+            else {
+                mouseX = event.clientX + document.body.scrollLeft;
+                mouseY = event.clientY + document.body.scrollTop;
+            }
+            moved = true;
+            return true;
+        }
+       
+        function getMousePos(X, Y) {
+          var rect = canvas.getBoundingClientRect();
+          return {
+            X: (X - rect.left)/canvas.width,
+            Y: (Y - rect.top)/canvas.height
+          };
+        } 
+
+        setInterval(function() {
+            if(moved && sharePointer) {
+                bbt.publish({channel: 'pres!{fileid}', resource: 'XY'}, getMousePos(mouseX, mouseY));
+            }
+            moved = false;
+        }, 100);
+
+        // Initial/first page rendering
+        renderPage(pageNum);
+
+        // Bindings
+        Mousetrap.bind('f', function() { toggleFullScreen(document.body); }, 'keyup');
+        Mousetrap.bind('p', function() { toggleSharePointer(); }, 'keyup');
+        Mousetrap.bind('left', function() { onPrevPage(); }, 'keyup');
+        Mousetrap.bind('right', function() { onNextPage(); }, 'keyup');
+
+        $(window).resize(doLayout);
+      });
+
+      function doLayout() {
+        renderPage(pageNum);
+      }
+
+      function toggleFullScreen(elem) {
+          // ## The below if statement seems to work better ## if ((document.fullScreenElement && document.fullScreenElement !== null) || (document.msfullscreenElement && document.msfullscreenElement !== null) || (!document.mozFullScreen && !document.webkitIsFullScreen)) {
+          if ((document.fullScreenElement !== undefined && document.fullScreenElement === null) || (document.msFullscreenElement !== undefined && document.msFullscreenElement === null) || (document.mozFullScreen !== undefined && !document.mozFullScreen) || (document.webkitIsFullScreen !== undefined && !document.webkitIsFullScreen)) {
+              if (elem.requestFullScreen) {
+                  elem.requestFullScreen();
+              } else if (elem.mozRequestFullScreen) {
+                  elem.mozRequestFullScreen();
+              } else if (elem.webkitRequestFullScreen) {
+                  elem.webkitRequestFullScreen(Element.ALLOW_KEYBOARD_INPUT);
+              } else if (elem.msRequestFullscreen) {
+                  elem.msRequestFullscreen();
+              }
+          } else {
+              if (document.cancelFullScreen) {
+                  document.cancelFullScreen();
+              } else if (document.mozCancelFullScreen) {
+                  document.mozCancelFullScreen();
+              } else if (document.webkitCancelFullScreen) {
+                  document.webkitCancelFullScreen();
+              } else if (document.msExitFullscreen) {
+                  document.msExitFullscreen();
+              }
+          }
+      }
+
+      function toggleSharePointer(mouseAction) {
+        var c = document.getElementById('pointer');
+        if ( !mouseAction ) c.checked = !c.checked;
+        sharePointer = c.checked;
+      }
+
+

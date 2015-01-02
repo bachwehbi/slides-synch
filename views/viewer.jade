@@ -1,0 +1,214 @@
+ad
+title Beebotte
+meta(http-equiv="Content-Type", content="text/html; charset=utf-8")
+meta(name="viewport", content="width=device-width, initial-scale=1.0")
+link(rel="stylesheet", type="text/css", href="//beebotte.com/bootstrap.css")
+// HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries
+//if lt IE 9
+  script(src="/html5shiv.js")
+  script(src="/respond.js")
+link(href="//fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,700italic,800italic,400,300,600,700,800", rel="stylesheet", type="text/css")
+style.
+  @media (min-width: 991px) {
+    #nav-top ul {
+      float: right;
+    }
+  }
+  nav .hide {
+    display:none;
+  }
+  .navigation {
+    position: fixed;
+    bottom: 15px;
+    right: 10%;
+    z-index: 999;
+    margin:0px;
+  }
+  .navigation_left {
+    position: fixed;
+    bottom: 15px;
+    left: 10%;
+    z-index: 999;
+    margin:0px;
+  }
+  .footer {
+    opacity: 0.75;
+  }
+  body {
+    background-color: #444444;
+  }
+dy
+div
+  canvas#the-canvas(style="display: block; margin:5px auto 0 auto; border:1px solid black")
+#pointer(style="width:5px; height: 5px; background-color:red; position: absolute;")
+nav.footer
+  ul.pager.navigation_left
+    li
+      button.btn.btn-success(onclick="toggleFullScreen(document.body)") Fullscreen
+  ul.pager.navigation
+    li
+      span
+        | Page:
+        span#page_num
+        | /
+        span#page_count
+script(src="//d2imkaiqu95sh.cloudfront.net/assets/js/jquery.min.js")
+script(src="//d2imkaiqu95sh.cloudfront.net/assets/js/bootstrap.min.js")
+script(src="//cdn.socket.io/socket.io-1.1.0.js")
+script(src="//beebotte.com/bbt.js")
+script(src="/js/pdf.js")
+script(src="/js/moustrap.min.js")
+script#script.
+      var url = '/f/!{fileid}.pdf';
+      var pdfDoc = null,
+          pageNum = 1,
+          pageRendering = false,
+          pageNumPending = null,
+          //scale = 1,
+          canvas = document.getElementById('the-canvas'),
+          ctx = canvas.getContext('2d'),
+          bbt = null;
+
+      /**
+       * Get page info from document, resize canvas accordingly, and render page.
+       * @param num Page number.
+       */
+      function renderPage(num) {
+        pageRendering = true;
+        // Using promise to fetch the page
+        pdfDoc.getPage(num).then(function(page) {
+          //var viewport = page.getViewport(scale);
+          canvas.height = window.innerHeight - 10  ;
+          var viewport = page.getViewport(canvas.height / page.getViewport(1.0).height);
+          if( viewport.width > window.innerWidth ) {
+            canvas.width = window.innerWidth - 10;
+            var viewport = page.getViewport(canvas.width / page.getViewport(1.0).width);
+            canvas.height = viewport.height;
+          }else {
+            canvas.width = viewport.width;
+          }
+
+          // Render PDF page into canvas context
+          var renderContext = {
+            canvasContext: ctx,
+            viewport: viewport
+          };
+          var renderTask = page.render(renderContext);
+
+          // Wait for rendering to finish
+          renderTask.promise.then(function () {
+            pageRendering = false;
+            if (pageNumPending !== null) {
+              // New page rendering is pending
+              renderPage(pageNumPending);
+              pageNumPending = null;
+            }
+          });
+        });
+
+        // Update page counters
+        document.getElementById('page_num').textContent = pageNum;
+      }
+
+      /**
+       * If another page rendering in progress, waits until the rendering is
+       * finised. Otherwise, executes rendering immediately.
+       */
+      function queueRenderPage(num) {
+        if (pageRendering) {
+          pageNumPending = num;
+        } else {
+          renderPage(num);
+        }
+      }
+
+      function gotoPage(num) {
+        if (num >= pdfDoc.numPages) {
+          pageNum = pdfDoc.numPages;
+          queueRenderPage(pageNum);
+          return;
+        }
+        if (num <= 1) {
+          pageNum = 1;
+          queueRenderPage(pageNum);
+          return;
+        }
+        if( num === pageNum) return;
+        
+        pageNum = num;
+        queueRenderPage(pageNum);
+      }
+
+      function divMove(X, Y){
+        var rect = canvas.getBoundingClientRect();
+
+        var div = document.getElementById('pointer');
+        div.style.position = 'absolute';
+        div.style.top = Math.floor(Y * canvas.height + rect.top) + 'px';
+        div.style.left = Math.floor(X * canvas.width + rect.left) + 'px';
+      }
+    
+      /**
+       * Asynchronously downloads PDF.
+       */
+      PDFJS.getDocument(url).then(function (pdfDoc_) {
+        pdfDoc = pdfDoc_;
+        document.getElementById('page_count').textContent = pdfDoc.numPages;
+        bbt = new BBT('502b09f9113252ba91d0fa24b2e69c1e', {ws_host: 'beebotte.com', auth_endpoint: '/auth'});
+
+        bbt.subscribe( {channel: 'pres!{fileid}', resource: 'join', read: true, write: true}, function(message){
+          console.log(message);
+        });
+
+        bbt.subscribe( {channel: 'pres!{fileid}', resource: 'synch', read: true, write: false}, function(message){
+          console.log(message);
+          gotoPage(message.data.page);
+        });
+
+        bbt.subscribe( {channel: 'pres!{fileid}', resource: 'XY', read: true, write: false}, function(message){
+            divMove(message.data.X, message.data.Y);
+        });
+
+        setTimeout(function() {console.log("zifit"); bbt.publish({channel: 'pres!{fileid}', resource: 'join'}, {time: Date.now()});}, 1250);
+        // Initial/first page rendering
+        renderPage(pageNum);
+
+        // Bindings
+        Mousetrap.bind('f', function() { toggleFullScreen(document.body); }, 'keyup');
+        Mousetrap.bind('h', function() { $("nav").toggleClass("hide"); }, 'keyup');
+
+        document.ondblclick = function (e) { $("nav").toggleClass("hide"); };
+
+        $(window).resize(doLayout);
+      });
+
+      function doLayout() {
+        renderPage(pageNum);
+      }
+
+      function toggleFullScreen(elem) {
+          // ## The below if statement seems to work better ## if ((document.fullScreenElement && document.fullScreenElement !== null) || (document.msfullscreenElement && document.msfullscreenElement !== null) || (!document.mozFullScreen && !document.webkitIsFullScreen)) {
+          if ((document.fullScreenElement !== undefined && document.fullScreenElement === null) || (document.msFullscreenElement !== undefined && document.msFullscreenElement === null) || (document.mozFullScreen !== undefined && !document.mozFullScreen) || (document.webkitIsFullScreen !== undefined && !document.webkitIsFullScreen)) {
+              if (elem.requestFullScreen) {
+                  elem.requestFullScreen();
+              } else if (elem.mozRequestFullScreen) {
+                  elem.mozRequestFullScreen();
+              } else if (elem.webkitRequestFullScreen) {
+                  elem.webkitRequestFullScreen(Element.ALLOW_KEYBOARD_INPUT);
+              } else if (elem.msRequestFullscreen) {
+                  elem.msRequestFullscreen();
+              }
+          } else {
+              if (document.cancelFullScreen) {
+                  document.cancelFullScreen();
+              } else if (document.mozCancelFullScreen) {
+                  document.mozCancelFullScreen();
+              } else if (document.webkitCancelFullScreen) {
+                  document.webkitCancelFullScreen();
+              } else if (document.msExitFullscreen) {
+                  document.msExitFullscreen();
+              }
+          }
+      }
+
+

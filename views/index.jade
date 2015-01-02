@@ -1,0 +1,38 @@
+html
+  head
+    link(rel="stylesheet", type="text/css", href="//beebotte.com/bootstrap.css")
+    link(href="css/dropzone.css", rel="stylesheet")
+    link(href="css/style.css", rel="stylesheet")
+  body
+    header#top.header
+      .text-vertical-center
+        h1 Present It
+        h3 Share &#38; Synchronize Presentations made easy
+        br
+        h4
+          b Drag &#38;amp Drop anywhere in this page
+        br
+        button#about.btn.btn-success.btn-lg Upload to Start
+        #preview
+    script(src="js/dropzone.js")
+    script.
+      var myDropzone = new Dropzone(document.body, { // Make the whole body a dropzone
+        url: "/upload", // Set the url
+        previewsContainer: "#preview", // Define the container to display the previews
+        paramName: "file", // The name that will be used to transfer the file
+        maxFilesize: 20, // MB
+        acceptedFiles: ".pdf",
+        createImageThumbnails: false,
+        clickable: "#about", // Define the element that should be used as click trigger to select files.
+      });
+      myDropzone.on("success", function(file, msg) {
+        console.log(msg.id);
+        gotoLive(msg);
+      });
+      myDropzone.on("complete", function(file, msg) {
+        myDropzone.removeFile(file);
+      });
+      function gotoLive(file) {
+        //window.location.assign("/p/" + file.id + "?fname=" + file.fname);
+        window.location.assign("/live");
+      }
