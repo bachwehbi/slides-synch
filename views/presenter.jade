@@ -39,7 +39,7 @@ nav
     li  
       button.btn.btn-success(onclick="toggleFullScreen(document.body)") Fullscreen
     li  
-      span Link: http://slidesynch.bachwehbi.net/v/#{fileid}
+      span#link NA
 nav
   ul.pager.navigation
     li
@@ -63,6 +63,7 @@ script(src="//beebotte.com/bbt.js")
 script(src="/js/pdf.js")
 script(src="/js/moustrap.min.js")
 script#script.
+      var link_pathname = '/v/#{fileid}';
       var url = '/f/!{fileid}.pdf';
       var pdfDoc = null,
           pageNum = 1,
@@ -166,6 +167,7 @@ script#script.
       PDFJS.getDocument(url).then(function (pdfDoc_) {
         pdfDoc = pdfDoc_;
         document.getElementById('page_count').textContent = pdfDoc.numPages;
+        document.getElementById('link').textContent = 'Link: ' + location.host + link_pathname;
         bbt = new BBT('502b09f9113252ba91d0fa24b2e69c1e', {ws_host: 'beebotte.com', auth_endpoint: '/auth'});
 
         bbt.subscribe( {channel: 'pres!{fileid}', resource: 'join', read: true, write: false}, function(message){
