@@ -6,10 +6,10 @@
     "start": "node app.js"
   },
   "dependencies": {
-    "express": "*",
-    "beebotte": "*",
-    "cookie-session": "*",
-    "formidable": "*",
-    "jade": "*"
+    "express": "4.13.4",
+    "beebotte": "0.7.5",
+    "cookie-session": "1.2.0",
+    "formidable": "1.0.17",
+    "jade": "1.11.0"
   }
 }
