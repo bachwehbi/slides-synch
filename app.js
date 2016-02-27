@@ -14,10 +14,8 @@ var express = require('express')
 // Replace by your ACCESS and SECRET Kayes
 var bclient = new bbt.Connector(
 {
-  keyId: '502b09f9113252ba91d0fa24b2e69c1e',
-  secretKey: '88303a6fdc866caeea2fe3bf4746611d16dce93196973d77e2037887f8fc6197',
-  //keyId: ACCESS_KEY,
-  //secretKey: SECRET_KEY,
+  keyId: ACCESS_KEY,
+  secretKey: SECRET_KEY,
 })
 
 var getID = function (nb) {
