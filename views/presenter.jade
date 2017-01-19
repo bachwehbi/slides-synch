@@ -2,7 +2,7 @@ ad
 title SlideSync
 meta(http-equiv="Content-Type", content="text/html; charset=utf-8")
 meta(name="viewport", content="width=device-width, initial-scale=1.0")
-link(rel="stylesheet", type="text/css", href="//beebotte.com/bootstrap.css")
+link(rel="stylesheet", href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css")
 // HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries
 //if lt IE 9
   script(src="/html5shiv.js")
@@ -37,21 +37,23 @@ div
 nav
   ul.pager.navigation_left
     li  
-      button.btn.btn-success(onclick="toggleFullScreen(document.body)") Fullscreen
-    li  
-      span#link NA
+      button.btn.btn-sm.btn-success(onclick="toggleFullScreen(document.body)") Fullscreen
+    li(style="margin-left: 5px;")
+      button.btn.btn-sm#link(data-clipboard-text="" data-clipboard-action="copy")
+        | Copy link  
+        span.glyphicon.glyphicon-copy
 nav
   ul.pager.navigation
     li
-      span
+      span(style="font-size: 12px; border-radius: 3px;")
         | Pointer:  
-        input#pointer(type="checkbox", name="pointer", onclick="toggleSharePointer(true);")    
+        input#pointer(type="checkbox", style="margin: 0;" name="pointer", onclick="toggleSharePointer(true);")    
     li  
-      button#prev.btn.btn-success Previous  
+      button#prev.btn.btn-sm.btn-success Previous  
     li  
-      button#next.btn.btn-success Next  
+      button#next.btn.btn-sm.btn-success Next  
     li  
-      span  
+      span(style="font-size: 12px; border-radius: 3px;")
         | Page:  
         span#page_num  
         | /  
@@ -62,7 +64,27 @@ script(src="//cdn.socket.io/socket.io-1.1.0.js")
 script(src="//beebotte.com/bbt.js")
 script(src="/js/pdf.js")
 script(src="/js/moustrap.min.js")
+script(src="/js/clipboard.min.js")
 script#script.
+
+      $('#link').tooltip({
+        trigger: 'click',
+        placement: 'right'
+      });
+
+
+      function setTooltip(message) {
+        $('#link').tooltip('hide')
+          .attr('data-original-title', message)
+          .tooltip('show');
+      }
+
+      function hideTooltip() {
+        setTimeout(function() {
+          $('#link').tooltip('hide');
+        }, 1000);
+      }
+
       var link_pathname = '/v/#{fileid}';
       var url = '/f/!{fileid}.pdf';
       var pdfDoc = null,
@@ -165,9 +187,10 @@ script#script.
        * Asynchronously downloads PDF.
        */
       PDFJS.getDocument(url).then(function (pdfDoc_) {
+
         pdfDoc = pdfDoc_;
         document.getElementById('page_count').textContent = pdfDoc.numPages;
-        document.getElementById('link').textContent = 'Link: ' + location.host + link_pathname;
+        document.getElementById('link').setAttribute('data-clipboard-text', location.host + link_pathname);
         bbt = new BBT('502b09f9113252ba91d0fa24b2e69c1e', {ws_host: 'beebotte.com', auth_endpoint: '/auth'});
 
         bbt.subscribe( {channel: 'pres!{fileid}', resource: 'join', read: true, write: false}, function(message){
@@ -179,6 +202,16 @@ script#script.
         });
 
         bbt.subscribe( {channel: 'pres!{fileid}', resource: 'XY', read: true, write: true}, function(message){
+        });
+
+        var clip = new Clipboard('#link');
+        clip.on('success', function(e) {
+          setTooltip('Copied!');
+          hideTooltip();
+        });
+        clip.on('error', function(e) {
+          etTooltip('Failed!');
+          hideTooltip();
         });
 
         var mie = (navigator.appName == "Microsoft Internet Explorer") ? true : false;
