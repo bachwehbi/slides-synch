@@ -71,8 +71,8 @@ app.get( '/auth', function (req, res, next) {
   var channel = req.query.channel
     , resource = req.query.resource || '*'
     , ttl = req.query.ttl || 0
-    , read = req.query.read === true
-    , write = req.query.write === true
+    , read = req.query.read === 'true'
+    , write = req.query.write === 'true'
     , sid = req.query.sid
 
   if (!sid || !channel) {
