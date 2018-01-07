@@ -5,7 +5,7 @@ This project is experimental!
 
 More description to come!
 
-Check the [demo](http://slidesynch.bachwehbi.net)
+Check the [demo](http://slidesynch.bachwehbi.net:8080)
 ## How it works
 * Upload a file (your presentation deck)
 * Share the presentation link
